@@ -5,27 +5,29 @@ import java.sql.SQLException;
 
 public class TransManager {
 
-	private static Connection conn=null;
-	static{
-		try {
-			conn=DaoUtils.getConn();
-		} catch (Exception e) {
-			e.printStackTrace();
+	private static ThreadLocal<Connection> tl=new ThreadLocal<Connection>(){
+		protected Connection initialValue(){
+			try {
+				return DaoUtils.getConn();
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
+			}
 		}
-	}
+	};
 	/**
 	 * 获取连接
 	 * @return
 	 */
 	public static Connection getConn(){
-		return conn;
+		return tl.get();
 	}
 	/**
 	 * 开启事物
 	 */
 	public static void startTran(){
 		try {
-			conn.setAutoCommit(false);
+			tl.get().setAutoCommit(false);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -36,7 +38,7 @@ public class TransManager {
 	 */
 	public static void commitTran(){
 		try {
-			conn.commit();
+			tl.get().commit();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -47,7 +49,7 @@ public class TransManager {
 	 */
 	public static void rollbackTran(){
 		try {
-			conn.rollback();
+			tl.get().rollback();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,7 +57,8 @@ public class TransManager {
 	}
 	public static void closeConn(){
 		try {
-			conn.close();
+			tl.get().close();
+			tl.remove();//map{tl:conn}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
